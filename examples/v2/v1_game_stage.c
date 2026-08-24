@@ -12,13 +12,14 @@ typedef unsigned int h1_u32;
 #define H1_COMPAT_SYS ((volatile h1_u32 *)0x83E02000u)
 #define H1_COMPAT_FS ((volatile h1_u32 *)0x83E03000u)
 #define H1_STAGE_DATA ((volatile h1_u32 *)0x83F10000u)
-#define H1_STAGE_TRACE ((volatile h1_u32 *)0xA3F10F00u)
+#define H1_STAGE_TRACE ((volatile h1_u32 *)0x83F0E000u)
+#define H1_STAGE_GENERATION ((volatile h1_u32 *)0x83F0EFFCu)
 
-/* The probe trace lives in reserved SDRAM and never enters a release archive. */
+/* Keep the compact trace inside the wrapper's reserved stage arena. */
 #define H1_TRACE_MAGIC 0x56545231u
 #define H1_TRACE_HEADER_WORDS 8u
 #define H1_TRACE_RECORD_WORDS 6u
-#define H1_TRACE_RECORD_COUNT 64u
+#define H1_TRACE_RECORD_COUNT 32u
 
 #define TRACE_STAGE_START 0x53544730u
 #define TRACE_STAGE_TABLES 0x53544731u
@@ -40,6 +41,7 @@ static const h1_u8 compat_game_name[] = "V1Game";
 
 static void trace_reset(void)
 {
+    h1_u32 generation = *H1_STAGE_GENERATION + 1u;
     h1_u32 index;
 
     for (index = 0u; index < H1_TRACE_HEADER_WORDS +
@@ -48,6 +50,8 @@ static void trace_reset(void)
     }
     H1_STAGE_TRACE[0] = H1_TRACE_MAGIC;
     H1_STAGE_TRACE[1] = 1u;
+    H1_STAGE_TRACE[6] = generation;
+    *H1_STAGE_GENERATION = generation;
 }
 
 static void trace_event(
@@ -70,6 +74,13 @@ static void trace_event(
     record[5] = result;
     H1_STAGE_TRACE[2] = (index + 1u) % H1_TRACE_RECORD_COUNT;
     H1_STAGE_TRACE[3] += 1u;
+    H1_STAGE_TRACE[4] = event;
+    __asm__ volatile ("sync" ::: "memory");
+}
+
+static void trace_phase(h1_u32 phase)
+{
+    H1_STAGE_TRACE[5] = phase;
     __asm__ volatile ("sync" ::: "memory");
 }
 
@@ -448,6 +459,7 @@ int h1_bda_main(const h1_u8 *game_source, h1_u32 game_size)
     h1_u32 result;
 
     trace_reset();
+    trace_phase(TRACE_STAGE_START);
     trace_event(TRACE_STAGE_START, game_size, (h1_u32)game_source, 0u, 0u, 0u);
     copy_words(saved, H1_PREFIX, 16u);
     v2_gui = (volatile h1_u32 *)saved[1];
@@ -493,8 +505,10 @@ int h1_bda_main(const h1_u8 *game_source, h1_u32 game_size)
     flush_cache((const volatile h1_u8 *)0x83C00020u, game_size);
     trace_event(TRACE_STAGE_TABLES, (h1_u32)v2_gui, (h1_u32)v2_res,
         (h1_u32)v2_sys, game_size, 0u);
+    trace_phase(TRACE_GAME_START);
     trace_event(TRACE_GAME_START, (h1_u32)H1_GAME_ENTRY, game_size, 0u, 0u, 0u);
     result = H1_GAME_ENTRY();
+    trace_phase(TRACE_GAME_RETURN);
     trace_event(TRACE_GAME_RETURN, (h1_u32)H1_GAME_ENTRY, game_size, 0u, 0u,
         (h1_u32)result);
 

@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RULES_PATH = ROOT / "examples" / "v2" / "v1_game_compat_rules.py"
+STAGE_PATH = ROOT / "examples" / "v2" / "v1_game_stage.c"
 
 
 def load_rules():
@@ -43,3 +44,11 @@ def test_unknown_service_is_rejected() -> None:
     rules = load_rules()
     assert rules.classify_service("GUI", 0xABC) is None
     assert rules.classify_service("SYS", 0x000) is None
+
+
+def test_trace_stays_inside_reserved_stage_arena() -> None:
+    source = STAGE_PATH.read_text(encoding="utf-8")
+    assert "#define H1_STAGE_TRACE ((volatile h1_u32 *)0x83F0E000u)" in source
+    assert "#define H1_STAGE_GENERATION ((volatile h1_u32 *)0x83F0EFFCu)" in source
+    assert "#define H1_TRACE_RECORD_COUNT 32u" in source
+    assert "0xA3F10F00u" not in source
