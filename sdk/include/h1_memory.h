@@ -132,4 +132,23 @@ static inline void *h1_realloc(void *pointer, h1_size_t size)
     return function(pointer, size);
 }
 
+/* Power-of-two alignment (4..4096), including 32-byte PCM/JIT storage.
+ * The original pointer lives just before the result; pair ONLY with
+ * h1_free_aligned, not h1_free. Overflow and allocation failure are checked. */
+static inline void *h1_alloc_aligned(h1_size_t size,h1_u32 alignment)
+{
+    void *base;h1_u32 address,extra;
+    if (!size || alignment<4 || alignment>4096 || (alignment&(alignment-1))) return 0;
+    extra=alignment-1+sizeof(void *);
+    if (size>0xffffffffu-extra) return 0;
+    base=h1_alloc(size+extra);
+    if (!base) return 0;
+    address=((h1_u32)base+sizeof(void *)+alignment-1)&~(alignment-1);
+    ((void **)address)[-1]=base;return (void *)address;
+}
+static inline void h1_free_aligned(void *pointer)
+{
+    if (pointer) h1_free(((void **)pointer)[-1]);
+}
+
 #endif

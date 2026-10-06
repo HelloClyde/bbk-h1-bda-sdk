@@ -95,6 +95,8 @@ class DeployGrowthTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "mutually free clusters"):
             deployment.select_free_clusters(volume, 1)
 
+    @unittest.skipUnless((deployment.H1_TOOLS / "h1_ftl.py").is_file(),
+                         "external NAND FTL helpers are not installed; set H1_EMULATOR_TOOLS")
     def test_allocate_ftl_records_reuses_mapping_and_allocates_after_bbt(self) -> None:
         record = deployment.h1_ftl.FtlRecord
         mapped = record(80, 0, "mapped", sequence=7, logical=5)

@@ -137,9 +137,16 @@ def compile_sources(
     debug_elf: Path | None = None,
     noinit_address: int | None = None,
     entry_va: int = ENTRY_VA,
+    runtime: bool = False,
+    linker_flags: Sequence[str] = (),
+    libraries: Sequence[Path] = (),
 ) -> bytes:
     if not sources:
         raise ValueError("at least one source file is required")
+    sources = list(sources)
+    sources.append(PROJECT_ROOT / "sdk/runtime/memory.c")
+    if runtime:
+        sources.extend([PROJECT_ROOT / "sdk/runtime/entry.S", PROJECT_ROOT / "sdk/runtime/start.c"])
     use_gnu = bool(os.environ.get("H1_GNU_BIN"))
     if use_gnu:
         compiler = _find_gnu_tool("gcc")
@@ -152,6 +159,17 @@ def compile_sources(
     include_dirs = [*extra_includes, PUBLIC_INCLUDE, RESEARCH_INCLUDE]
     include_args = [item for path in include_dirs for item in ("-I", str(path))]
     define_args = [item for value in defines for item in ("-D", value)]
+    link_libraries = list(map(str, libraries))
+    if use_gnu:
+        # Raw ld does not implicitly supply compiler-generated division and
+        # soft-float helpers. Select the archive with the SAME target ABI.
+        archive = subprocess.run(
+            [str(compiler), "-EL", "-march=mips32", "-mabi=32", "-msoft-float",
+             "-print-libgcc-file-name"], check=True, capture_output=True, text=True
+        ).stdout.strip()
+        if not Path(archive).is_file():
+            raise SystemExit("GNU compiler did not resolve a usable libgcc archive")
+        link_libraries.append(archive)
 
     with tempfile.TemporaryDirectory(prefix="h1-bda-") as temporary:
         work = Path(temporary)
@@ -178,10 +196,19 @@ def compile_sources(
 SECTIONS
 {{
   . = 0x{entry_va:08x};
-  .text : {{ *(.text.h1_bda_entry) *(.text*) }}
+  .h1_entry : SUBALIGN(4) {{ KEEP(*(.text.h1_bda_entry)) }}
+  ASSERT(h1_bda_main == 0x{entry_va:08x}, "BDA entry moved by section alignment")
+  .text : {{ *(.text*) }}
   .rodata : {{ *(.rodata*) }}
-  .data : {{ *(.data*) *(.sdata*) *(.bss*) *(COMMON) }}
+  . = ALIGN(4);
+  .preinit_array : {{ __h1_preinit_start = .; KEEP(*(.preinit_array*)) __h1_preinit_end = .; }}
+  .init_array : {{ __h1_init_start = .; KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*))) KEEP(*(.init_array)) __h1_init_end = .; }}
+  .fini_array : {{ __h1_fini_start = .; KEEP(*(SORT_BY_INIT_PRIORITY(.fini_array.*))) KEEP(*(.fini_array)) __h1_fini_end = .; }}
+  .ctors : {{ __h1_ctors_start = .; KEEP(*(.ctors)) KEEP(*(SORT(.ctors.*))) __h1_ctors_end = .; }}
+  .dtors : {{ __h1_dtors_start = .; KEEP(*(.dtors)) KEEP(*(SORT(.dtors.*))) __h1_dtors_end = .; }}
+  .data : {{ *(.data*) *(.sdata*) *(.bss*) *(.sbss*) *(COMMON) }}
   .got : {{ *(.got*) }}
+  _gp = ALIGN(16) + 0x7ff0;
 {noinit_placement}
   . = ALIGN(16);
   .h1_noinit (NOLOAD) :
@@ -199,10 +226,17 @@ SECTIONS
             encoding="ascii",
         )
         for index, source in enumerate(sources):
+            is_cpp = source.suffix in (".cc", ".cpp", ".cxx", ".C")
+            source_compiler = (
+                _find_gnu_tool("g++") if is_cpp and use_gnu else compiler
+            )
+            language_flags = (["-std=c++17", "-fno-exceptions", "-fno-rtti",
+                               "-fno-threadsafe-statics", "-fno-use-cxa-atexit"]
+                              if is_cpp else [])
             output_object = work / f"{index:03d}-{source.stem}.o"
             target_args = (
                 ["-EL", "-msoft-float"] if use_gnu else
-                ["--target=mipsel-none-elf"]
+                ["--target=mipsel-none-elf", "-msoft-float"]
             )
             selected_compiler_flags = list(compiler_flags)
             if use_gnu:
@@ -212,7 +246,7 @@ SECTIONS
                 ]
             _run(
                 [
-                    str(compiler),
+                    str(source_compiler),
                     *target_args,
                     "-march=mips32",
                     "-mabi=32",
@@ -228,6 +262,7 @@ SECTIONS
                     *privacy_flags,
                     *include_args,
                     *define_args,
+                    *language_flags,
                     *selected_compiler_flags,
                     "-c",
                     str(source),
@@ -246,7 +281,11 @@ SECTIONS
                 str(linker),
                 "--build-id=none",
                 "--gc-sections",
+                *linker_flags,
+                "--start-group",
                 *map(str, output_objects),
+                *link_libraries,
+                "--end-group",
                 "-o",
                 str(output_elf),
             ],
@@ -278,6 +317,9 @@ def build_bda(
     icon_png: Path | None = None,
     noinit_address: int | None = None,
     entry_va: int = ENTRY_VA,
+    runtime: bool = False,
+    linker_flags: Sequence[str] = (),
+    libraries: Sequence[Path] = (),
 ) -> bytes:
     source_list = [sources] if isinstance(sources, Path) else list(sources)
     payload = compile_sources(
@@ -288,6 +330,9 @@ def build_bda(
         debug_elf,
         noinit_address,
         entry_va,
+        runtime,
+        linker_flags,
+        libraries,
     )
     resources = (
         build_icon_resources(icon_png)
@@ -325,6 +370,10 @@ def main() -> None:
         help="additional compiler flag; repeat for multiple flags",
     )
     parser.add_argument("-o", "--output", required=True, type=Path)
+    parser.add_argument("--runtime", action="store_true",
+                        help="use SDK private-stack entry and C++ initializer runtime; define h1_app_main")
+    parser.add_argument("--lflag", action="append", default=[], help="additional raw linker flag")
+    parser.add_argument("--library", action="append", type=Path, default=[], help="link a static archive")
     parser.add_argument(
         "--icon-png",
         type=Path,
@@ -347,6 +396,9 @@ def main() -> None:
         args.cflag,
         icon_png=args.icon_png,
         entry_va=args.entry_va,
+        runtime=args.runtime,
+        linker_flags=args.lflag,
+        libraries=args.library,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(data)

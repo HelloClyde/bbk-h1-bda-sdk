@@ -26,7 +26,7 @@ if hasattr(sys.stderr, "reconfigure"):
 
 SDK_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = SDK_ROOT.parent
-H1_TOOLS = WORKSPACE_ROOT / "scripts"
+H1_TOOLS = Path(os.environ.get("H1_EMULATOR_TOOLS", str(WORKSPACE_ROOT / "scripts")))
 if str(H1_TOOLS) not in sys.path:
     sys.path.insert(0, str(H1_TOOLS))
 
@@ -43,10 +43,25 @@ def load_workspace_module(name: str, path: Path):
     return module
 
 
-h1_ftl = load_workspace_module("h1_ftl", H1_TOOLS / "h1_ftl.py")
-build_nand = load_workspace_module(
-    "build_h1_system_nand", H1_TOOLS / "build_h1_system_nand.py"
-)
+class _OptionalEmulatorModule:
+    """Keep FAT helpers importable without an author's adjacent workspace."""
+    def __init__(self, name: str):
+        self.name = name
+        self.module = None
+
+    def __getattr__(self, attribute: str):
+        if self.module is None:
+            path = H1_TOOLS / (self.name + ".py")
+            if not path.is_file():
+                raise FileNotFoundError(
+                    "NAND operations require external emulator tools; set "
+                    f"H1_EMULATOR_TOOLS to their directory (missing {path.name})"
+                )
+            self.module = load_workspace_module(self.name, path)
+        return getattr(self.module, attribute)
+
+h1_ftl = _OptionalEmulatorModule("h1_ftl")
+build_nand = _OptionalEmulatorModule("build_h1_system_nand")
 
 
 @dataclass(frozen=True)

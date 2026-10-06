@@ -29,6 +29,16 @@ tests/             格式与构建回归测试
 
 English version: [README.en.md](README.en.md)
 
+## H1-GBA 移植改进（此 fork）
+
+补充 V1.41 原生游戏窗口/framebuffer、持续组合键、系统文件选择、校准触摸、
+PCM 描述符与生命周期、RTC 日历、JIT 缓存同步，并改进混合 C/C++/汇编构建、
+libgcc、构造函数和私有栈启动。通过 `#include "h1_v141.h"` 明确启用；
+音频内部游标和 TCU5 高精度计时保留为实验接口。
+
+用法、固件适用范围、测试与证据见 [原生游戏开发指南](docs/native-games.md)。
+本 fork 的改进没有自动更换 H1-GBA 已发布版本使用的 SDK 子模块。
+
 ## 许可
 
 原创源代码和文档采用 [Apache License 2.0](LICENSE)。验证截图及其中展示的第三方界面见 [NOTICE](NOTICE)。

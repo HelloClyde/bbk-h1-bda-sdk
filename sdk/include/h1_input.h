@@ -8,6 +8,9 @@
 #define H1_EVENT_TIMER    3
 #define H1_EVENT_KEY_DOWN 9
 #define H1_EVENT_KEY_UP   10
+#define H1_EVENT_TOUCH_UP 8
+#define H1_EVENT_TOUCH_DOWN 11
+#define H1_EVENT_TOUCH_MOVE 12
 
 /* H1 full-keyboard matrix values used by the emulator and native firmware. */
 #define H1_KEY_Q       1
@@ -62,7 +65,9 @@ static inline int h1_event_fetch(int *code, int *value)
         h1_runtime_table(H1_RUNTIME_GUI_TABLE_SLOT),
         H1_GUI_EVENT_FETCH_OFFSET
     );
-    return function(code, value);
+    if (!code || !value) return 0;
+    *code = *value = -1;
+    return function ? function(code, value) : 0;
 }
 
 /* Returns 1 for one key transition, 0 when no key transition is available. */
@@ -71,6 +76,8 @@ static inline int h1_input_poll_key(int *pressed, int *key)
     int code;
     int value;
     int attempt;
+
+    if (!pressed || !key) return 0;
 
     for (attempt = 0; attempt < 32; ++attempt) {
         h1_event_fetch(&code, &value);

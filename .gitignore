@@ -1,4 +1,5 @@
 /build/
+/.tools/
 /ports/kov_pgm/
 **/__pycache__/
 **/.pytest_cache/

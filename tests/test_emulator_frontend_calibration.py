@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import re
 import struct
 import sys
@@ -10,8 +11,8 @@ from unittest import mock
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
-FRONTEND = WORKSPACE_ROOT / "emulator/windows-x86_64/h1_emulator.py"
-FRONTEND_HTML = WORKSPACE_ROOT / "emulator/windows-x86_64/web/index.html"
+FRONTEND = Path(os.environ.get("H1_EMULATOR_FRONTEND", str(WORKSPACE_ROOT / "emulator/windows-x86_64/h1_emulator.py")))
+FRONTEND_HTML = FRONTEND.parent / "web/index.html"
 
 
 def load_frontend():
@@ -33,6 +34,7 @@ def make_runtime(frontend, touch_profile: str):
     )
 
 
+@unittest.skipUnless(FRONTEND.is_file(), "optional emulator frontend missing; set H1_EMULATOR_FRONTEND")
 class CalibrationFrameTests(unittest.TestCase):
     def test_each_real_target_is_detected_from_rgba_frame(self) -> None:
         frontend = load_frontend()
@@ -74,6 +76,7 @@ class CalibrationFrameTests(unittest.TestCase):
         )
 
 
+@unittest.skipUnless(FRONTEND.is_file(), "optional emulator frontend missing; set H1_EMULATOR_FRONTEND")
 class FrontendConfigurationTests(unittest.TestCase):
     def test_retired_a320_asset_bridge_is_opt_in(self) -> None:
         frontend = load_frontend()

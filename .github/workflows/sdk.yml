@@ -1,0 +1,36 @@
+name: H1 SDK build and MIPS regression tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-gnu:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies and pinned toolchain
+        run: |
+          python -m pip install -r requirements-dev.txt
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python scripts/install_gnu_toolchain.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          "H1_GNU_BIN=$((Resolve-Path .tools/toolchain/bin).Path)" >> $env:GITHUB_ENV
+          'SOURCE_DATE_EPOCH=1791244800' >> $env:GITHUB_ENV
+      - name: Run regressions (optional external emulator tests report skips)
+        run: python -m pytest tests -q -p no:faulthandler
+      - name: Build and validate native demo
+        run: |
+          python -m h1_bda.build examples/native_game.c --runtime --title H1NativeDemo -o build/H1NativeDemo.bda
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m h1_bda.validate build/H1NativeDemo.bda
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }

@@ -16,6 +16,7 @@ static inline void *h1_runtime_table(h1_u32 slot)
 
 static inline void *h1_runtime_entry(void *table, h1_u32 offset)
 {
+    if (!table || (offset & 3u)) return 0;
     return *(void **)((h1_u8 *)table + offset);
 }
 
