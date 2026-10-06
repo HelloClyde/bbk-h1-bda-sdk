@@ -23,6 +23,12 @@ def run(payload):
     return u
 
 class V141Tests(unittest.TestCase):
+    def test_generated_code_cache_sync_and_address_bounds(self):
+        # Unicorn accepts privileged CACHE but does not model physical cache
+        # coherence; this checks emitted-code execution and API address bounds.
+        u=run(compile_sources([FIXTURES/'code_cache.c'],[]))
+        self.assertEqual(u.reg_read(UC_MIPS_REG_V0),0,'failure is the fixture C line number')
+
     def test_profile_clock_wrap_terminal_faults_ownership_and_restore(self):
         u=run(compile_sources([FIXTURES/'profile_clock.c'],[],compiler_flags=['-Wall','-Wextra','-Werror']))
         self.assertEqual(u.reg_read(UC_MIPS_REG_V0),0,'failure is the fixture C line number')
