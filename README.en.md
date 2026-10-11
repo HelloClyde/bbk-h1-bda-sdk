@@ -44,7 +44,8 @@ covered by [NOTICE](NOTICE).
 ## H1-GBA additions in this fork
 
 See [the native game guide](docs/native-games.md) for opt-in V1.41 game window,
-framebuffer, simultaneous input, file picker, touch, PCM, RTC and cache APIs,
+framebuffer, simultaneous input, file picker, touch, PCM, system volume set/get,
+RTC and cache APIs,
 mixed C/C++/assembly builds and constructor/private-stack startup. Internal
 PCM cursor inspection and TCU5 profiling remain experimental. New execution
 tests use mocked MIPS services and do not claim fresh physical-device proof.

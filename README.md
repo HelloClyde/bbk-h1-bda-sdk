@@ -32,7 +32,7 @@ English version: [README.en.md](README.en.md)
 ## H1-GBA 移植改进（此 fork）
 
 补充 V1.41 原生游戏窗口/framebuffer、持续组合键、系统文件选择、校准触摸、
-PCM 描述符与生命周期、RTC 日历、JIT 缓存同步，并改进混合 C/C++/汇编构建、
+PCM 描述符与生命周期、系统音量设置/读取、RTC 日历、JIT 缓存同步，并改进混合 C/C++/汇编构建、
 libgcc、构造函数和私有栈启动。通过 `#include "h1_v141.h"` 明确启用；
 音频内部游标和 TCU5 高精度计时保留为实验接口。
 

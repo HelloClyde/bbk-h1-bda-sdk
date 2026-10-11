@@ -8,11 +8,15 @@ static h1_game_input input;
 int h1_app_main(void)
 {
     char path[264];h1_game_framebuffer fb;h1_u32 tick,last=0,phase=0,progress_tick=0,progress_position=0;
-    unsigned sound,i,x,y;short pcm[256];int event,key;
+    unsigned sound,i,x,y;short pcm[256];int event,key,original_volume=0,volume_owned=0;
     if (h1_file_pick("A:\\","*",path,sizeof path)!=1) return 0;
     if (!h1_game_open()) return -1;
     if (!h1_game_framebuffer_get(&fb)) { h1_game_close();return -1; }
+    /* Capture before device open; adjust only if playback opened successfully. */
+    volume_owned=h1_audio_get_volume(&original_volume);
     sound=(unsigned)h1_pcm_stream_open(&audio,ring,8192,4096,32000);
+    if (sound && volume_owned) volume_owned=h1_audio_set_volume(70);
+    else volume_owned=0;
     h1_game_input_reset(&input);
     for (;;) {
         /* Bound queue draining so an event storm cannot starve rendering. */
@@ -30,6 +34,7 @@ int h1_app_main(void)
                 progress_position=audio.read_position;progress_tick=tick;
             } else if ((h1_u32)(tick-progress_tick)>80u) {
                 h1_pcm_stream_close(&audio);sound=0;
+                if (volume_owned) { (void)h1_audio_set_volume(original_volume);volume_owned=0; }
             }
             if (audio.queued<=audio.prefill) {
                 for (i=0;i<256;++i) { pcm[i]=phase<16 ? 1500 : -1500;phase=(phase+1)%32; }
@@ -48,5 +53,7 @@ int h1_app_main(void)
         }
     }
 done:
-    h1_pcm_stream_close(&audio);h1_game_close();return 0;
+    h1_pcm_stream_close(&audio);
+    if (volume_owned) (void)h1_audio_set_volume(original_volume);
+    h1_game_close();return 0;
 }

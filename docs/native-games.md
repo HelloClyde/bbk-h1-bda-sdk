@@ -12,7 +12,7 @@
 
 这是**明确选择 V1.41 ABI**的入口，未自动加入通用 `h1_sdk.h`，不适用于 V2
 或 9588。服务表偏移并不是固件版本检测；开发者必须先确认运行环境。
-触摸、音频内部游标另有指令特征检查，不能把它当成完整固件鉴权。
+触摸、系统音量和音频内部游标另有指令特征检查，不能把它当成完整固件鉴权。
 
 | 改进 | 接口与边界 |
 |---|---|
@@ -22,6 +22,7 @@
 | RGB565 输出 | `h1_game_blit_rgb565` 在缓存内转换整行，再顺序写 LCD，避免读回无缓存 framebuffer。未提供新的插值缩放器。 |
 | 触摸 | `h1_touch_position` 返回校准后的 480×272 LCD 坐标，失败不改输出；事件常量补入 `h1_input.h`。 |
 | PCM | `h1_pcm_api_get`、完整 32 字节描述符和 36 字节配置类型。未知模式、route/flags 不编造枚举。 |
+| 音量 | `h1_audio_set_volume` / `h1_audio_get_volume`，0–100 的系统全局音量；未知实现拒绝调用，读取失败不改输出。 |
 | RTC | `h1_rtc_read_local_seconds`、`h1_rtc_read_calendar`，只读有效 2000–2099 日历，不修改设备时钟。 |
 | JIT | `h1_code_cache_sync` 同步 KSEG0 可执行 RAM 的 D/I cache，不能代替核心 ABI 适配。 |
 
@@ -53,6 +54,38 @@ Fn/Power 没有确认的原生转换，使用事件处理。`h1_input_poll_key` 
 应用系统校准；原生模式缓存坐标可能过期，不应自行解算未校准的原始 ADC。
 
 ## PCM 与音频节奏
+
+### 系统音量
+
+包含 `h1_v141.h` 后可调用：
+
+```c
+int h1_audio_set_volume(int percent);
+int h1_audio_get_volume(int *percent);
+```
+
+两者返回 1=成功、0=接口缺失/指令特征不匹配；读取也在空输出指针或固件返回值
+不在 0–100 时失败，失败保留输出原值。设置把负数限制为 0，大于 100 限制为 100。
+`SYS+0x40` 的原生类型是 `void (*)(int)`，SDK 的返回值只表示已经调用已识别的
+接口，不是硬件确认；`SYS+0x44` 是 `int (*)(void)`。两个入口均通过运行时 SYS 表
+解析，检查对齐、代码地址范围和 V1.41 指令特征，不硬编码实现地址。
+
+这是**系统全局音量**，不是软件 PCM 增益。0 表示静音，不停止 PCM 或关闭设备；
+数值不表示 dB 或听感线性。调用不依赖 PCM 描述符，不会自动开启音频、保存设置
+或恢复系统音量。应用应在打开设备之前读取原值，在成功打开后设置所需音量，
+在关闭后恢复，包括播放失败、换游戏及退出等清理路径。设备被其他应用同时使用时，
+音量变化也会影响它们。`examples/native_game.c` 演示 70% 播放和退出/停滞时恢复。
+
+```c
+int saved_volume;
+int volume_owned = h1_audio_get_volume(&saved_volume);
+/* 在此打开 PCM 设备；失败则直接清理，不改变音量。 */
+if (volume_owned) volume_owned = h1_audio_set_volume(70);
+/* 播放，按需要调节；在此关闭 PCM 设备。 */
+if (volume_owned) (void)h1_audio_set_volume(saved_volume);
+```
+
+### PCM 生命周期
 
 原版《使命》的音效用 **SYS** 表，不是 GUI 播放接口：
 `+0x50/+0x54` 初始化/销毁描述符，`+0x58` 初始化设备，`+0x5C` 提交，
@@ -139,6 +172,15 @@ NAND 部署依赖外部 `h1_ftl.py/build_h1_system_nand.py`，可通过
 生成代码测试覆盖地址边界和修改后执行；Unicorn 不建模真机 D/I cache 一致性，
 该测试不能单独证明物理缓存刷新正确。
 
+音量回归测试执行交叉编译的 SDK 包装器和带真实指令特征的 MIPS 服务桩，覆盖
+读写、0/100 边界、正负越界限制、原值恢复、void 设置 ABI、无效读取值、空指针、
+缺失/未对齐/越界入口及特征不匹配。这是包装器行为测试，不是完整固件或真机测试。
+
+底层音量服务的完整固件证据来自 GameBoy v0.12.4：普通版和性能版在完整 H1
+V1.41 固件 QEMU 中验证了 GBA/GB/GBC 继续运行和退出恢复，系统原值均为 51；
+70% 有非零 PCM 样本，0% 输出样本全零。该证据验证的是 GameBoy 使用的同一组
+固件服务，并非此次 SDK 示例构建，也不是新的物理 H1 测试。
+
 既有 H1-GBA 测试、日志与实现来源：
 
 - [原生游戏输入](https://github.com/HelloClyde/BBKH1-GBA/blob/v0.12.3/docs/h1-game-input.md)
@@ -146,6 +188,8 @@ NAND 部署依赖外部 `h1_ftl.py/build_h1_system_nand.py`，可通过
 - [PCM 音频](https://github.com/HelloClyde/BBKH1-GBA/blob/v0.12.3/docs/h1-audio.md)
 - [性能计时与真机边界](https://github.com/HelloClyde/BBKH1-GBA/blob/v0.12.3/docs/h1-performance.md)
 - [RTC](https://github.com/HelloClyde/BBKH1-GBA/blob/v0.12.3/docs/h1-gba-rtc.md)
+- [v0.12.4 普通版完整固件音量证据](https://github.com/HelloClyde/BBKH1-GBA/blob/v0.12.4/docs/evidence/v0.12.4-native-normal.json)
+- [v0.12.4 性能版完整固件音量证据](https://github.com/HelloClyde/BBKH1-GBA/blob/v0.12.4/docs/evidence/v0.12.4-native-profile.json)
 - SDK 原有 [音频逆向记录](../reverse/docs/audio_api.md)
 
 原版 BDA、固件镜像、商业 ROM 和个人真机日志不复制进 SDK。固件地址只是分析

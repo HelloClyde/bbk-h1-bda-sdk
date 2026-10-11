@@ -23,6 +23,10 @@ def run(payload):
     return u
 
 class V141Tests(unittest.TestCase):
+    def test_system_volume_abi_clamping_restore_and_signature_rejection(self):
+        u=run(compile_sources([FIXTURES/'audio_volume.c'],[],compiler_flags=['-Wall','-Wextra','-Werror']))
+        self.assertEqual(u.reg_read(UC_MIPS_REG_V0),0,'failure is the fixture C line number')
+
     def test_generated_code_cache_sync_and_address_bounds(self):
         # Unicorn accepts privileged CACHE but does not model physical cache
         # coherence; this checks emitted-code execution and API address bounds.
