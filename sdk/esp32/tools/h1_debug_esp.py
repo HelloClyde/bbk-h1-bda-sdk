@@ -15,12 +15,8 @@ class ESPTransport:
         self.mode = False
         self.closed = False
         if serial_port is None:
-            import serial
-            serial_port = serial.Serial(port=None, baudrate=115200, timeout=self.timeout, write_timeout=2)
-            serial_port.dtr = False
-            serial_port.rts = False
-            serial_port.port = port
-            serial_port.open()
+            from h1_esp_serial import open_console
+            serial_port, self.info = open_console(port, timeout=self.timeout)
         self.serial = serial_port
         try:
             self.serial.reset_input_buffer()
@@ -36,7 +32,11 @@ class ESPTransport:
 
     def _receive(self):
         if b'\n' not in self.lines:
-            self.lines.extend(self.serial.readline(2048))
+            if hasattr(self.serial, 'in_waiting'):
+                from h1_esp_serial import read_chunk
+                self.lines.extend(read_chunk(self.serial))
+            else:  # Existing injected/model transports.
+                self.lines.extend(self.serial.readline(2048))
         if len(self.lines)>8192:
             raise OSError('ESP bridge line exceeds limit')
         if b'\n' not in self.lines:
@@ -69,7 +69,8 @@ class ESPTransport:
             raise ValueError('ESP debug frame must be 1..528 bytes')
         self.sequence = self.sequence % 0xffffffff + 1
         line = b'H1CFG/1 DBG DATA ' + str(self.sequence).encode() + b' ' + base64.b64encode(data) + b'\n'
-        self.serial.write(line)
+        if self.serial.write(line) != len(line):
+            raise OSError('Short ESP bridge write; command outcome may be unknown')
         deadline = time.monotonic() + self.command_timeout
         while self.ack != self.sequence and time.monotonic() < deadline:
             self._receive()

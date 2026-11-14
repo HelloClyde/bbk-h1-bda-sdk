@@ -30,15 +30,14 @@ def exchange(port, command, timeout=6):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('--port', required=True, help='ESP32 USB2 / CH340 port; enumerate it before use')
+    ap.add_argument('--port', required=True, help='ESP32 USB2 / CH340 port, not H1 COM4')
     ap.add_argument('action', choices=['status','set','clear'], nargs='?', default='status')
     args = ap.parse_args()
-    serial = serial_module();port = serial.Serial(port=None, baudrate=115200, timeout=0.3, write_timeout=2)
-    port.dtr = False;port.rts = False;port.port = args.port
+    from h1_esp_serial import open_console
+    port, info = open_console(args.port,timeout=.3)
     try:
-        port.open();time.sleep(0.2)
-        info = exchange(port, 'INFO')
-        if info.get('target') != 'esp32s3' or info.get('firmware') not in ('h1-wifi/0.1.0', 'h1-wifi/0.2.0', 'h1-wifi/0.3.0', 'h1-wifi/0.3.1', 'h1-wifi/0.3.2', 'h1-wifi/0.3.3', 'h1-wifi/0.4.0', 'h1-wifi/0.4.1', 'h1-wifi/0.4.2', 'h1-wifi/0.4.3', 'h1-wifi/0.4.4'):
+
+        if info.get('target') != 'esp32s3' or info.get('firmware') not in ('h1-wifi/0.1.0', 'h1-wifi/0.2.0', 'h1-wifi/0.3.0', 'h1-wifi/0.3.1', 'h1-wifi/0.3.2', 'h1-wifi/0.3.3', 'h1-wifi/0.4.0', 'h1-wifi/0.4.1', 'h1-wifi/0.4.2', 'h1-wifi/0.4.3', 'h1-wifi/0.4.4', 'h1-wifi/0.4.5'):
             raise RuntimeError('Unexpected firmware identity; configuration was not changed.')
         if args.action == 'set':
             ssid = input('2.4 GHz Wi-Fi name (SSID): ')

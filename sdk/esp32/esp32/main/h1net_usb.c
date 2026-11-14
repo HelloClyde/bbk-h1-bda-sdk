@@ -21,6 +21,8 @@
 #define USB_GONE BIT0
 #define USB_OVERFLOW BIT1
 #define USB_OPEN BIT2
+#define USB_RX BIT3
+#define USB_BRIDGE BIT4
 static StreamBufferHandle_t received;
 static EventGroupHandle_t usb_events;
 static cdc_acm_dev_hdl_t device;
@@ -35,7 +37,9 @@ bool h1net_usb_bridge_submit(unsigned operation,uint32_t sequence,const uint8_t 
        length>528 || (length&&!data))return false;
     bridge_command command={.operation=operation,.sequence=sequence,.length=length};
     if(length)memcpy(command.data,data,length);
-    return xQueueSend(bridge_commands,&command,0)==pdTRUE;
+    if(xQueueSend(bridge_commands,&command,0)!=pdTRUE)return false;
+    xEventGroupSetBits(usb_events,USB_BRIDGE);
+    return true;
 }
 static void bridge_service(void)
 {
@@ -114,6 +118,7 @@ static bool data_received(const uint8_t *data,size_t length,void *unused)
 {
     (void)unused;
     if(xStreamBufferSend(received,data,length,0)!=length)xEventGroupSetBits(usb_events,USB_OVERFLOW);
+    xEventGroupSetBits(usb_events,USB_RX);
     return true;
 }
 static void event(const cdc_acm_host_dev_event_data_t *data,void *unused)
@@ -209,9 +214,15 @@ void h1net_usb_task(void *unused)
         set_stage("connected",ESP_OK);
         xEventGroupSetBits(usb_events,USB_OPEN);ESP_LOGI("h1_usb","H1 CDC connected; waiting for H1NET/1 HELLO");
         while(!(xEventGroupGetBits(usb_events)&(USB_GONE|USB_OVERFLOW))){
+            /* Clear before checking both queues. A producer arriving after
+             * either check leaves its bit set, so the wait cannot lose a wake.
+             * Never borrow the stream buffer's task-notification slot. */
+            xEventGroupClearBits(usb_events,USB_RX|USB_BRIDGE);
             bridge_service();
-            uint8_t data[256];size_t n=xStreamBufferReceive(received,data,sizeof data,pdMS_TO_TICKS(10));
+            uint8_t data[256];size_t n=xStreamBufferReceive(received,data,sizeof data,0);
             if(n){if(bridging)bridge_receive(data,n);else h1net_parser_feed(&parser,data,n,request,NULL);}
+            else (void)xEventGroupWaitBits(usb_events,USB_RX|USB_BRIDGE|USB_GONE|USB_OVERFLOW,
+                                          pdFALSE,pdFALSE,pdMS_TO_TICKS(10));
         }
         if(bridging){printf("\nH1DBG/1 GONE\n");fflush(stdout);}
         bridging=false;

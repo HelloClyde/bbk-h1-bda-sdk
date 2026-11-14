@@ -293,7 +293,7 @@ static void info_reply(void)
     uint32_t status[6];h1net_wifi_status(status);
     cJSON *reply=cJSON_CreateObject();if(!reply)return;
     cJSON_AddStringToObject(reply,"protocol","H1CFG/1");cJSON_AddBoolToObject(reply,"ok",true);
-    cJSON_AddStringToObject(reply,"firmware","h1-wifi/0.4.4");
+    cJSON_AddStringToObject(reply,"firmware","h1-wifi/0.4.5");
     cJSON_AddStringToObject(reply,"target","esp32s3");
     h1wifi_status wireless;snapshot(&wireless);
     cJSON_AddStringToObject(reply,"ssid",wireless.saved);
@@ -371,10 +371,15 @@ static void configure(const char *text)
 void h1net_config_task(void *unused)
 {
     (void)unused;char line[1024];unsigned used=0;bool overflow=false;
-    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_0,2048,0,0,NULL,0));
+    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_0,4096,0,0,NULL,0));
     for(;;){
-        uint8_t b;int n=uart_read_bytes(UART_NUM_0,&b,1,pdMS_TO_TICKS(100));
+        uint8_t bytes[256];int n=uart_read_bytes(UART_NUM_0,bytes,1,pdMS_TO_TICKS(100));
         if(n!=1)continue;
+        size_t queued=0;ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_NUM_0,&queued));
+        if(queued>sizeof bytes-1)queued=sizeof bytes-1;
+        if(queued){int extra=uart_read_bytes(UART_NUM_0,bytes+1,queued,0);if(extra>0)n+=extra;}
+        for(int i=0;i<n;i++){
+        uint8_t b=bytes[i];
         if(b=='\r')continue;
         if(b=='\n'){
             if(overflow){config_reply(false,"command too long");h1net_secure_clear(line,sizeof line);used=0;overflow=false;continue;}
@@ -405,5 +410,7 @@ void h1net_config_task(void *unused)
         }
         if(!b){overflow=true;continue;}
         if(used+1<sizeof line && !overflow)line[used++]=(char)b;else overflow=true;
+        }
+        h1net_secure_clear(bytes,sizeof bytes);
     }
 }

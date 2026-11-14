@@ -52,6 +52,10 @@ def main():
     for key in ("USB_HOST_HUBS_SUPPORTED", "MBEDTLS_EXTERNAL_MEM_ALLOC", "SPIRAM"):
         if config.get(key) is not True:
             raise SystemExit("required generated configuration missing: " + key)
+    if (config.get("ESP_CONSOLE_UART_BAUDRATE") != 921600 or
+        config.get("ESP_CONSOLE_UART_NUM") != 0 or
+        config.get("ESP_CONSOLE_UART_TX_GPIO") != 43 or config.get("ESP_CONSOLE_UART_RX_GPIO") != 44):
+        raise SystemExit("requires generated UART0 TX43/RX44 at 921600 baud")
     args.output.mkdir(parents=True, exist_ok=True)
     names = ["h1_wifi.bin", "bootloader/bootloader.bin", "partition_table/partition-table.bin",
              "flasher_args.json", "config/sdkconfig.json", "config/sdkconfig.h"]
@@ -61,7 +65,7 @@ def main():
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(build / name, destination)
         hashes[name] = hashlib.sha256(destination.read_bytes()).hexdigest()
-    manifest = dict(firmware="0.4.4", target="esp32s3", idf_commit=revision,
+    manifest = dict(firmware="0.4.5", target="esp32s3", idf_commit=revision,
                     hardware_verified=False, source_sha256=copied, files=hashes)
     (args.output / "build.json").write_text(json.dumps(manifest, indent=2)+"\n", encoding="utf-8")
     print("Built and hashed firmware:", args.output.resolve())

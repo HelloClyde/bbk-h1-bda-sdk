@@ -1,0 +1,93 @@
+{
+  "date": "2026-11-14",
+  "hardware_scope": "physical H1/Y100 V1.41, CH340K USB2 UART, direct soft OTG to ESP USB1; no Hub",
+  "h1_debug_image_id": "e14aaef1",
+  "h1_debug_unchanged": true,
+  "firmware_sha256": "3f8d74d95eeab3cd16e5cb4eed599399ef7d75ab9ac383dada348d74da722a59",
+  "baseline": {
+    "firmware": "h1-wifi/0.4.4",
+    "baud": 115200,
+    "size": 32768,
+    "rounds": [
+      {
+        "kind": "new",
+        "put_seconds": 7.9689999998081475,
+        "put_Bps": 4111.933743354108,
+        "write_rpc_seconds": 6.625,
+        "write_rpc_Bps": 4946.11320754717,
+        "write_rpc_count": 66,
+        "get_seconds": 6.5,
+        "get_Bps": 5041.2307692307695,
+        "sha256_verified": true
+      },
+      {
+        "kind": "replace",
+        "put_seconds": 8.281000000191852,
+        "put_Bps": 3957.010022852414,
+        "write_rpc_seconds": 6.5469999997876585,
+        "write_rpc_Bps": 5005.040476716477,
+        "write_rpc_count": 66,
+        "get_seconds": 6.5,
+        "get_Bps": 5041.2307692307695,
+        "sha256_verified": true
+      }
+    ],
+    "device_tick_delta": 1185
+  },
+  "candidate": {
+    "firmware": "h1-wifi/0.4.5",
+    "baud": 921600,
+    "size": 32768,
+    "rounds": [
+      {
+        "kind": "new",
+        "put_seconds": 3.375,
+        "put_Bps": 9709.037037037036,
+        "write_rpc_seconds": 2.202999999979511,
+        "write_rpc_Bps": 14874.26236963448,
+        "write_rpc_count": 66,
+        "get_seconds": 1.702999999979511,
+        "get_Bps": 19241.338814089395,
+        "sha256_verified": true
+      },
+      {
+        "kind": "replace",
+        "put_seconds": 5.25,
+        "put_Bps": 6241.523809523809,
+        "write_rpc_seconds": 3.280999999959022,
+        "write_rpc_Bps": 9987.199024812331,
+        "write_rpc_count": 66,
+        "get_seconds": 1.672000000020489,
+        "get_Bps": 19598.086124161753,
+        "sha256_verified": true
+      }
+    ],
+    "device_tick_delta": 494
+  },
+  "sustained": {
+    "size": 262144,
+    "rounds": [
+      {
+        "kind": "new",
+        "put_seconds": 21.95299999997951,
+        "put_Bps": 11941.146995865925,
+        "write_rpc_seconds": 17.719000000040978,
+        "write_rpc_Bps": 14794.514363078828,
+        "write_rpc_count": 521,
+        "get_seconds": 13.0,
+        "get_Bps": 20164.923076923078,
+        "sha256_verified": true
+      }
+    ],
+    "device_tick_delta": 1415
+  },
+  "device_tick_hz": null,
+  "all_readback_sha256_matched": true,
+  "all_owned_test_files_removed": true,
+  "limitations": [
+    "Only debugger bridge/file transfers physically checked; not a continuous music/network playback acceptance.",
+    "Raw device tick rate not calibrated; throughput uses PC monotonic wall time.",
+    "Large sample has no equally-sized 0.4.4 baseline; compare speed ratios only for the identical 32KiB samples."
+  ],
+  "completed_date": "2026-11-15"
+}

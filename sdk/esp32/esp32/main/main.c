@@ -11,7 +11,7 @@
 void app_main(void)
 {
     ESP_ERROR_CHECK(nvs_flash_init());
-    ESP_LOGI("h1net","H1NET/1 firmware 0.4.4; H1 Wi-Fi setup + HTTP/audio; TLS PSRAM allocation; PSRAM=%lu bytes",
+    ESP_LOGI("h1net","H1NET/1 firmware 0.4.5; H1 Wi-Fi setup + HTTP/audio; TLS PSRAM allocation; PSRAM=%lu bytes",
              (unsigned long)(esp_psram_is_initialized()?esp_psram_get_size():0));
     h1net_wifi_init();h1net_http_init();
     ESP_ERROR_CHECK(xTaskCreate(h1net_config_task,"h1_config",6144,NULL,4,NULL)==pdPASS?ESP_OK:ESP_ERR_NO_MEM);
