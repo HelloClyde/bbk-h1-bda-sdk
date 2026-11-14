@@ -140,6 +140,7 @@ def compile_sources(
     runtime: bool = False,
     linker_flags: Sequence[str] = (),
     libraries: Sequence[Path] = (),
+    esp32: bool = False,
 ) -> bytes:
     if not sources:
         raise ValueError("at least one source file is required")
@@ -147,6 +148,15 @@ def compile_sources(
     sources.append(PROJECT_ROOT / "sdk/runtime/memory.c")
     if runtime:
         sources.extend([PROJECT_ROOT / "sdk/runtime/entry.S", PROJECT_ROOT / "sdk/runtime/start.c"])
+    if esp32:
+        if entry_va != ENTRY_VA:
+            raise ValueError("ESP32 native USB backend supports H1 V1.41 only")
+        base = PROJECT_ROOT / "sdk" / "esp32"
+        sources.extend([base / "h1_esp32.c", base / "common/h1net_wire.c",
+                        base / "common/h1net_client.c", base / "common/h1net_wifi_config.c",
+                        base / "h1/native.c", base / "h1/usb.c", base / "h1/firmware.c"])
+        extra_includes = [*extra_includes, base / "common", base / "h1"]
+        compiler_flags = [*compiler_flags, "-Wno-misleading-indentation"]
     use_gnu = bool(os.environ.get("H1_GNU_BIN"))
     if use_gnu:
         compiler = _find_gnu_tool("gcc")
@@ -320,6 +330,7 @@ def build_bda(
     runtime: bool = False,
     linker_flags: Sequence[str] = (),
     libraries: Sequence[Path] = (),
+    esp32: bool = False,
 ) -> bytes:
     source_list = [sources] if isinstance(sources, Path) else list(sources)
     payload = compile_sources(
@@ -333,6 +344,7 @@ def build_bda(
         runtime,
         linker_flags,
         libraries,
+        esp32,
     )
     resources = (
         build_icon_resources(icon_png)
@@ -385,6 +397,7 @@ def main() -> None:
         default=ENTRY_VA,
         help="runtime link/entry address (default: 0x83c00020 for H1 V1)",
     )
+    parser.add_argument("--esp32", action="store_true", help="link optional H1 V1.41 ESP32 network library")
     args = parser.parse_args()
 
     data = build_bda(
@@ -399,6 +412,7 @@ def main() -> None:
         runtime=args.runtime,
         linker_flags=args.lflag,
         libraries=args.library,
+        esp32=args.esp32,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(data)

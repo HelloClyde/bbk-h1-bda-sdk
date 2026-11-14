@@ -11,3 +11,8 @@
 *.log
 *.pyc
 *.pyo
+
+/sdk/esp32/esp32/build/
+/sdk/esp32/esp32/managed_components/
+/sdk/esp32/esp32/sdkconfig
+/sdk/esp32/esp32/sdkconfig.old

@@ -10,4 +10,6 @@
 #include "h1_input.h"
 #include "h1_time.h"
 
+#include "h1_esp32.h"
+
 #endif

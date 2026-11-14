@@ -5,3 +5,13 @@ Verification screenshots may depict proprietary firmware interfaces, names,
 or trademarks. They are included only as research evidence and are not
 licensed under the Apache License 2.0. All rights in depicted material remain
 with their respective owners.
+
+ESP32 networking extension: original H1NET, H1 USB CDC and ESP32 control code
+imported with copyright-holder authorization under Apache-2.0. This does not
+relicense third-party components. sdk/esp32/third_party/zlib retains the zlib
+license; the optional AAC dependency uses Espressif Modified MIT (Espressif
+products only; see sdk/esp32/licenses/esp_audio_codec.txt). IDF and managed
+components retain their own notices. Example H1WiFi16 glyphs are a GNU Unifont
+subset under SIL OFL 1.1; license and upstream copyright are in
+examples/esp32_wifi/fonts/. No proprietary BBK firmware or commercial media
+are included.

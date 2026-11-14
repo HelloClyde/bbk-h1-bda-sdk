@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 45 45">
+<title>H1 Wi-Fi设置</title><defs>
+<linearGradient id="blue" x2="0" y2="1"><stop stop-color="#36b7ef"/><stop offset="1" stop-color="#0862d6"/></linearGradient>
+<clipPath id="tile"><rect x="1" y="1" width="43" height="43" rx="9"/></clipPath></defs>
+<rect x="1" y="1" width="43" height="43" rx="9" fill="url(#blue)" stroke="#0550a0"/>
+<rect x="2.1" y="2.1" width="40.8" height="40.8" rx="8" fill="none" stroke="#a9e0ff" stroke-opacity=".75"/>
+<ellipse cx="23" cy="-1.5" rx="31" ry="24.5" fill="white" fill-opacity=".165" clip-path="url(#tile)"/>
+<g fill="none" stroke="white" stroke-width="3">
+<path d="M 8.711 12.711 A 19.5 19.5 0 0 1 36.289 12.711"/>
+<path d="M 12.954 18.954 A 13.5 13.5 0 0 1 32.046 18.954"/>
+<path d="M 17.197 25.197 A 7.5 7.5 0 0 1 27.803 25.197"/></g>
+<circle cx="22.5" cy="32.5" r="2.3" fill="white"/>
+<polygon points="40.900,34.700 42.262,36.105 41.852,37.455 39.939,37.867 39.231,38.731 39.200,40.687 37.955,41.352 36.312,40.290 35.200,40.400 33.795,41.762 32.445,41.352 32.033,39.439 31.169,38.731 29.213,38.700 28.548,37.455 29.610,35.812 29.500,34.700 28.138,33.295 28.548,31.945 30.461,31.533 31.169,30.669 31.200,28.713 32.445,28.048 34.088,29.110 35.200,29.000 36.605,27.638 37.955,28.048 38.367,29.961 39.231,30.669 41.187,30.700 41.852,31.945 40.790,33.588" fill="#f7fcff"/><circle cx="35.2" cy="34.7" r="2.9" fill="#0d6bc6"/>
+</svg>

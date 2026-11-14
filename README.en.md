@@ -49,3 +49,9 @@ RTC and cache APIs,
 mixed C/C++/assembly builds and constructor/private-stack startup. Internal
 PCM cursor inspection and TCU5 profiling remain experimental. New execution
 tests use mocked MIPS services and do not claim fresh physical-device proof.
+
+## ESP32-S3 networking
+
+Optional `h1_esp32_*` APIs, full ESP32-S3 firmware, hardware notes and a Wi-Fi setup example. Production needs no always-on PC/NAS. Physical evidence for the imported core is distinguished from the new facade/example tests.
+
+[API and guide](docs/esp32.md) · [Hardware](docs/esp32-hardware.md) · [Firmware](sdk/esp32/README.md) · [Wi-Fi example](examples/esp32_wifi/README.md) · [Verification](docs/esp32-verification.md)

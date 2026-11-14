@@ -42,3 +42,9 @@ libgcc、构造函数和私有栈启动。通过 `#include "h1_v141.h"` 明确�
 ## 许可
 
 原创源代码和文档采用 [Apache License 2.0](LICENSE)。验证截图及其中展示的第三方界面见 [NOTICE](NOTICE)。
+
+## ESP32-S3 通用联网
+
+新增可选的 `h1_esp32_*` API、完整 ESP32-S3 固件、选型/接线说明及 Wi-Fi 设置样例。生产使用不需要电脑/NAS常驻。原通信核心已有 H1+ESP 实测，新封装和样例验证边界另列。
+
+[API and guide](docs/esp32.md) · [Hardware](docs/esp32-hardware.md) · [Firmware](sdk/esp32/README.md) · [Wi-Fi example](examples/esp32_wifi/README.md) · [Verification](docs/esp32-verification.md)

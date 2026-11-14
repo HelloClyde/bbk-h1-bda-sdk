@@ -34,3 +34,12 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -m h1_bda.validate build/H1NativeDemo.bda
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build Wi-Fi setup using generic ESP32 APIs
+        run: |
+          python -m h1_bda.build examples/esp32_wifi/main.c examples/esp32_wifi/core.c --runtime --esp32 --title "Wi-Fi设置" --icon-png examples/esp32_wifi/assets/wifi-settings.png -o build/H1WiFiSetup.bda
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m h1_bda.validate build/H1WiFiSetup.bda
+      - uses: actions/upload-artifact@v4
+        with:
+          name: H1WiFiSetup
+          path: build/H1WiFiSetup.bda

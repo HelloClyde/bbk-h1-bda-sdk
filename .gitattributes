@@ -7,3 +7,6 @@
 *.jpeg binary
 *.png binary
 *.webp binary
+
+# Preserve upstream font license text, including its original whitespace.
+/examples/esp32_wifi/fonts/*.txt -whitespace

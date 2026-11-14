@@ -1,0 +1,31 @@
+name: ESP32 SDK
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  host-protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e .
+      - run: python -m unittest discover -s tests -p test_esp32.py -k session_protocol -v
+      - run: python -m unittest discover -s tests -p test_esp32.py -k wifi_ui_host -v
+  firmware:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v5.5.6
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          . /opt/esp/idf/export.sh
+          python sdk/esp32/tools/build_firmware.py --stage /tmp/h1-sdk-esp32 --jobs 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ESP32-S3-firmware
+          path: build/esp32/
