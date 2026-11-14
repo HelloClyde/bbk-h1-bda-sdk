@@ -35,7 +35,7 @@ H1NET固件当前仅有一个解码器；两个C对象不会共享状态，但�
 完整可执行构建示例见`scripts/build_media_probe.py`。轻量应用可只编译draw.c或images.c，不必链接FFmpeg/libc全集。
 
 库和模块都按需求参与链接，未使用的段会被剔除；标准SDK基本构建不自动引入媒体依赖。
-FFmpeg配置只启用当前所需MOV/M4A/AAC相关部分；源码保留上游原始许可，使用此可选模块需遵守LGPL等第三方条款。
+FFmpeg配置包含MOV/M4A解复用、AAC和H264解码/解析；未引用的段在链接时剔除。QQ音乐在H1端仅解复用，AAC由ESP处理。源码保留上游原始许可，使用此可选模块需遵守LGPL等第三方条款。
 来源和许可证见`sdk/media/THIRD_PARTY.md`。字体再生：
 `python sdk/media/generate_font.py --japanese --korean`。字库原始像素保留，不依赖商业字体。
 
