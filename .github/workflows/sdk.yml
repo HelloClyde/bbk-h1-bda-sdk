@@ -8,6 +8,8 @@ permissions:
 jobs:
   windows-gnu:
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
     defaults:
       run:
         shell: pwsh
