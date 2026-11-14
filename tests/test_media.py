@@ -30,7 +30,7 @@ def test_images(tmp_path):
          '-I',tmp_path,'-I',ROOT/'sdk/include','-I',z,'-I',png,'-I',jpeg,*sources,'-lm','-o',dll])
     lib=ctypes.CDLL(str(dll));decode=lib.h1_image_decode_rgb565
     decode.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.POINTER(ctypes.c_void_p),ctypes.POINTER(ctypes.c_uint),ctypes.POINTER(ctypes.c_uint),ctypes.c_uint,ctypes.c_uint]
-    libc=ctypes.CDLL('msvcrt' if os.name=='nt' else None);libc.free.argtypes=[ctypes.c_void_p]
+    release=lib.h1_image_free;release.argtypes=[ctypes.c_void_p];release.restype=None
     def check(raw,ok,w=32,h=16):
         out=ctypes.c_void_p();ow=ctypes.c_uint();oh=ctypes.c_uint()
         e=decode(raw,len(raw),ctypes.byref(out),ctypes.byref(ow),ctypes.byref(oh),w,h)
@@ -38,7 +38,7 @@ def test_images(tmp_path):
             assert (e==0)==ok
             if ok:assert (ow.value,oh.value)==(32,16);assert ctypes.cast(out,ctypes.POINTER(ctypes.c_uint16))[0]==0xffff
             else:assert not out.value and not ow.value and not oh.value
-        finally:libc.free(out)
+        finally:release(out)
     for mode,fmt in [('RGB','JPEG'),('RGBA','PNG'),('P','PNG')]:
         image=Image.new(mode,(64,32),'white' if mode!='P' else 0)
         if mode=='P':image.putpalette([255,255,255]+[0]*765)

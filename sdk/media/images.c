@@ -122,3 +122,4 @@ int h1_image_decode_rgb565(const unsigned char *data,unsigned size,uint16_t **ou
     if(data[0]==255&&data[1]==216)return jpeg_image(data,size,out,w,h,mw,mh);
     if(!png_sig_cmp(data,0,8))return decode_png(data,size,out,w,h,mw,mh);return -1;
 }
+void h1_image_free(uint16_t *pixels){free(pixels);}
