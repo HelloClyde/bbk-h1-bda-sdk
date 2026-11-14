@@ -1,0 +1,21 @@
+{
+  "name": "H1Pixel16",
+  "source_sha256": "f9c8c7802453f47be02677176aeac2342ee96d354fad7a26cedcce48e68e1d9f",
+  "header_sha256": "6a62ac8e2b1e13bf09c7ab3a19ec2aa55861b6eeb0b72e19ec2c9b5805a1aeb2",
+  "glyphs": 22369,
+  "ascii_cell": [
+    8,
+    16
+  ],
+  "cjk_cell": [
+    16,
+    16
+  ],
+  "GB2312_complete": true,
+  "JIS_X_0208_complete": true,
+  "japanese_codepoints": 7015,
+  "Hangul_syllables_complete": true,
+  "korean_codepoints": 11623,
+  "lossless_pixel_shapes": true,
+  "packed_bytes": 782915
+}

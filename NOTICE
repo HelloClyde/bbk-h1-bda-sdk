@@ -15,3 +15,5 @@ components retain their own notices. Example H1WiFi16 glyphs are a GNU Unifont
 subset under SIL OFL 1.1; license and upstream copyright are in
 examples/esp32_wifi/fonts/. No proprietary BBK firmware or commercial media
 are included.
+
+Optional sdk/media original adapters are also provided under Apache-2.0 with copyright-holder authorization. Third-party media libraries, pixel fonts and existing MIT PCM retain their own licenses; see sdk/media/THIRD_PARTY.md.

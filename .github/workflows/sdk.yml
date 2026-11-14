@@ -41,7 +41,21 @@ jobs:
           python -m h1_bda.build examples/esp32_wifi/main.c examples/esp32_wifi/core.c --runtime --esp32 --title "Wi-Fi设置" --icon-png examples/esp32_wifi/assets/wifi-settings.png -o build/H1WiFiSetup.bda
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -m h1_bda.validate build/H1WiFiSetup.bda
+      - name: Build optional media link probe
+        run: python scripts/build_media_probe.py
       - uses: actions/upload-artifact@v4
         with:
           name: H1WiFiSetup
           path: build/H1WiFiSetup.bda
+
+  media-host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install Pillow pytest
+      - run: python -m pytest tests/test_media.py -q

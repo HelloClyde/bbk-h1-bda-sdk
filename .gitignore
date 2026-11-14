@@ -16,3 +16,7 @@
 /sdk/esp32/esp32/managed_components/
 /sdk/esp32/esp32/sdkconfig
 /sdk/esp32/esp32/sdkconfig.old
+
+/sdk/media/third_party/ffmpeg-0.6.7/config.h
+/sdk/media/third_party/ffmpeg-0.6.7/libavutil/avconfig.h
+*.a

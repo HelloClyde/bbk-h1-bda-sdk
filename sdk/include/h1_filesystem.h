@@ -87,4 +87,17 @@ static inline int h1_remove(const char *path)
     return function(path);
 }
 
+/* V1.41 single-directory creation, existing parent required. Paths use GBK.
+ * Returns native 0 success / nonzero failure; unknown firmware returns -1.
+ * Implementation researched with H1Debug FILE_MKDIR, not a debug RPC call. */
+static inline int h1_mkdir(const char *path)
+{
+    typedef int (*fn_type)(const char *);
+    const h1_u32 *code=(const h1_u32 *)h1_runtime_entry(
+        h1_runtime_table(H1_RUNTIME_FS_TABLE_SLOT),0x30u);
+    if(!path || ((h1_u32)code&3u) || (h1_u32)code<0x80000000u ||
+       (h1_u32)code>0x83fffffcu || code[0]!=0x27bdffd8u)return -1;
+    return ((fn_type)code)(path);
+}
+
 #endif

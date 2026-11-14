@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/mattconte/tlsf",
+  "commit": "deff9ab509341f264addbd3c8ada533678591905",
+  "local_sha256": {
+    "tlsf.c": "2c057fea8031a48b87905187e9f9460da7be703219b24cf21f91afe976249230",
+    "tlsf.h": "f7f73c48810ba60203095667c226e5a600a6ea0f69afba48efff6efbaa628d4f",
+    "README.md": "968c3f0d60fb9ee8cc1047503823e75ccc28bf6e7e7b0451894b01c1e400d939"
+  },
+  "h1_changes": [
+    "realloc allocates moved blocks with eight-byte alignment; wrapper also uses memalign(8) and eight-byte block strides"
+  ]
+}
