@@ -9,7 +9,251 @@ H1 是 USB **设备**，ESP 是 USB **主机**；这不是 USB 网卡驱动，�
 [选型与接线](esp32-hardware.md)、[固件构建](../sdk/esp32/README.md)、
 [完整协议](../sdk/esp32/PROTOCOL.md)、[验证边界](esp32-verification.md)。
 
-## 构建和最小用法
+## ESP32 固件源码在哪里
+
+**固件源码已随 SDK 公开**，当前版本 **0.4.5**，不需要新闻或 QQ音乐工程才能构建。
+ESP 提供通用网络能力；扫码、网站账号和业务配置由 H1 应用负责。
+
+| 路径 | 内容 |
+| --- | --- |
+| `sdk/esp32/esp32/main/` | ESP32-S3 的 USB Host、Wi-Fi、HTTP/HTTPS、校时、AAC 和调试隧道实现 |
+| `sdk/esp32/common/` | H1NET/1 协议与公共通信代码 |
+| `sdk/esp32/esp32/sdkconfig.defaults`、`partitions.csv` | 板型、内存、串口、Hub 和分区配置 |
+| `sdk/esp32/esp32/main/idf_component.yml`、`sdk/esp32/esp32/dependencies.lock` | 固定版本的外部组件与依赖锁 |
+| `sdk/esp32/tools/build_firmware.py`、`flash_firmware.py` | 构建、产物清单、烧录前检查、写入与读回校验 |
+| `.github/workflows/esp32.yml` | 固定 IDF 容器构建和固件 Artifact |
+
+以下所有 `python sdk/...` 命令均在 **H1 SDK 仓库根目录**执行。只构建/烧录 ESP 固件
+不需要 H1 的 MIPS 工具链；生成 H1 的 `.bda` 应用才需要 MIPS 工具链。
+
+## 从零安装 ESP32-S3 构建环境
+
+### 1. 核对板型和依赖版本
+
+默认支持已经实测的睿星双 Type-C **ESP32-S3 N16R8**：16 MiB Flash、8 MiB 八线 PSRAM。
+默认 Flash DIO/40 MHz，PSRAM OCT/40 MHz，UART0 TX43/RX44。其他 S3 板应先核对
+Flash、PSRAM 类型、引脚和 USB1 供电电路，不能仅因为名称含 S3 就直接套用。
+选型、J-OTG、软线 OTG 与 CC/Hub 限制见[硬件说明](esp32-hardware.md)。
+
+| 依赖 | 本工程要求 |
+| --- | --- |
+| ESP-IDF | **v5.5.6**，提交 `880a203ae603d08a94d06aa01e0d6761958e5e9e` |
+| 目标芯片 | `esp32s3`，不支持用传统 ESP32/C3 的镜像替代 |
+| USB CDC Host 组件 | `espressif/usb_host_cdc_acm` **2.4.1** |
+| 音频组件 | `espressif/esp_audio_codec` **2.6.2**，许可证见[固件说明](../sdk/esp32/README.md#许可证与第三方边界) |
+| Python、Xtensa、CMake、Ninja、esptool | 使用上述 IDF 安装/激活的环境；本地验证 Python 3.11、esptool 4.13.0 |
+
+保留已提交的组件锁文件，让 IDF 组件管理器下载依赖。首次构建需要访问 GitHub、
+乐鑫工具下载站和组件仓库，源码仓库没有把这些工具和厂商二进制重新打包进去。
+
+### 2. Windows 安装和激活
+
+1. 安装 Git。到[乐鑫 EIM 官方下载/安装说明](https://docs.espressif.com/projects/idf-im-ui/en/latest/)
+   安装 ESP-IDF Installation Manager，**显式选择 ESP-IDF 5.5.6 和 ESP32-S3**。
+   不要使用安装器默认的最新 IDF 替代本工程锁定版本。
+2. IDF、工具及 staging 路径使用不含空格/中文的短路径，例如 `C:\Espressif`。
+   SDK 仓库可以在带空格的工作目录中；构建脚本会复制公开源文件到独立 staging 再编译。
+3. 打开安装器为 **5.5.6** 生成的 ESP-IDF PowerShell 终端。普通 PowerShell 没有自动激活
+   Xtensa 和 Python 环境。本项目实测安装器生成的激活文件如下；你的路径以安装结果为准：
+
+```powershell
+. 'C:\Espressif\tools\Microsoft.v5.5.6.PowerShell_profile.ps1'
+python --version
+idf.py --version
+python -c "import sys, esptool, serial; print(sys.executable); print(esptool.__version__)"
+git -C "$env:IDF_PATH" rev-parse HEAD
+```
+
+最后两项应指向 IDF 的 Python 环境并输出上表提交。若提示 `IDF_PATH` 不存在、找不到
+`idf.py`、`esptool` 或 `serial`，先重新激活/修复这套 IDF 环境，不要改用系统的另一个 Python。
+此处的 profile 路径是实测示例，并非仓库附带的文件。
+
+在同一终端检出 SDK（已经有仓库的可直接进入）：
+
+```powershell
+New-Item -ItemType Directory -Force C:\src | Out-Null
+git clone https://github.com/HelloClyde/bbk-h1-bda-sdk.git C:\src\bbk-h1-bda-sdk
+Set-Location C:\src\bbk-h1-bda-sdk
+```
+
+### 3. Linux / macOS 环境
+
+按[乐鑫 5.5.6 安装指南](https://docs.espressif.com/projects/esp-idf/en/v5.5.6/esp32s3/get-started/linux-macos-setup.html)
+安装系统依赖，再在无空格目录执行：
+
+```sh
+git clone --branch v5.5.6 --recursive https://github.com/espressif/esp-idf.git "$HOME/esp-idf-v5.5.6"
+cd "$HOME/esp-idf-v5.5.6"
+./install.sh esp32s3
+. ./export.sh
+git rev-parse HEAD
+# 应为 880a203ae603d08a94d06aa01e0d6761958e5e9e
+# 然后 cd 到另行检出的 bbk-h1-bda-sdk 仓库根目录
+```
+
+每个新终端都需要激活 IDF 环境。若 v5.5.6 检出的提交与上述值不同，应先核对来源；
+构建脚本会拒绝不匹配的 IDF，而不会继续编出被误标为同一版本的固件。
+
+## 构建固件及检查产物
+
+Windows（已激活 IDF 的 PowerShell、SDK 根目录）：
+
+```powershell
+python sdk/esp32/tools/build_firmware.py --stage "$env:TEMP/h1-sdk-esp32" --jobs 2
+```
+
+如果 Windows 用户名/临时目录包含空格，改用可写的无空格目录，例如
+`--stage C:/Espressif/h1-sdk-esp32`。Linux/macOS：
+
+```sh
+python sdk/esp32/tools/build_firmware.py --stage /tmp/h1-sdk-esp32 --jobs 2
+```
+
+脚本核对 IDF 提交、设置 `esp32s3`，从 `sdkconfig.defaults` 生成配置，下载锁定组件并构建。
+默认两进程限制内存使用。它不导入旧工程的 `sdkconfig`、密码或日志；修改构建配置应改
+仓库里的 defaults，再运行脚本，不要只改 staging 的 menuconfig。
+
+成功时结尾显示 `Built and hashed firmware:`，SDK 根目录产生 `build/esp32/`：
+
+| 文件 | 默认烧录地址 / 用途 |
+| --- | --- |
+| `bootloader/bootloader.bin` | `0x0`，首次安装的引导程序 |
+| `partition_table/partition-table.bin` | `0x8000`，首次安装的分区表 |
+| `h1_wifi.bin` | `0x10000`，应用程序 |
+| `flasher_args.json` | 构建器生成的地址、镜像名和 Flash 参数 |
+| `config/sdkconfig.json`、`config/sdkconfig.h` | 实际生效的配置 |
+| `build.json` | 版本、目标、IDF 提交、公开源码指纹及产物 SHA256 |
+
+地址表仅解释本工程当前分区；烧录工具实际读取并校验生成的 `flasher_args.json`。
+工具检查 Hub、PSRAM、TLS 外部内存和 UART0 TX43/RX44/921600 的生成配置，缺少任一项
+不会发布产物。`build.json` 中 `hardware_verified=false` 是正常的：编译成功不能自动变成实机验收。
+
+先做不需要接板、不调用 esptool 的离线检查：
+
+```sh
+python sdk/esp32/tools/flash_firmware.py --check
+python sdk/esp32/tools/flash_firmware.py --check --all
+```
+
+两条命令都须成功，分别列出 app-only 的一个镜像和首次安装的三个镜像。哈希不符、
+烧录配置不在哈希清单内或缺少目标镜像会直接失败。
+
+### 不自己编译时：使用 CI 固件
+
+进入 [GitHub Actions → ESP32 SDK](https://github.com/HelloClyde/bbk-h1-bda-sdk/actions/workflows/esp32.yml)，
+选择目标提交且 `firmware` 成功的运行，下载 **ESP32-S3-firmware** Artifact
+（GitHub 可能要求登录）。解压并找到含 `build.json` 的目录，保留全部子目录。
+使用同一提交的工具，给下面所有检查/烧录命令追加
+`--images C:/path/to/extracted-firmware`；不要只拿 `h1_wifi.bin` 也不要混用其他构建的引导/分区文件。
+CI 每次实际编译，并对两种烧录方案执行 `--check`；没有连接实体 ESP，不能代替硬件验收。
+
+## 烧录到 ESP32-S3
+
+### 1. 只连接右侧 USB2，重新确认串口
+
+先把 H1 从 ESP 的 USB1 断开。正面朝你、天线向上、USB 向下时：**右 USB2** 通过
+有数据通路的线接电脑，左 USB1 留空。充电宝/仅供电线无法提供电脑烧录通道。
+关闭占用 ESP 串口的日志终端、配网工具和 H1Debug 桥接客户端。
+
+```sh
+python -m serial.tools.list_ports -v
+```
+
+Windows 在设备管理器「端口 (COM 和 LPT)」中核对 CH340K；没有端口时检查数据线，
+并按板商说明安装 USB-UART 驱动。记下实际端口，下文 `COM7` 全部换成你的值；
+它可能变化，不要照抄旧 H1 的 COM4。Linux 常见 `/dev/ttyUSB0`，macOS 常见
+`/dev/cu.usbserial-*`，同样以列举结果为准。
+
+### 2. 首次安装 / 从其他固件切换
+
+确认是上述 N16R8 板和当前分区布局后，在 IDF 终端、SDK 根目录执行：
+
+```sh
+python sdk/esp32/tools/flash_firmware.py --port COM7 --all
+```
+
+写入 bootloader、分区表和应用，然后执行 **verify_flash 读回校验**。脚本默认 ROM 下载
+波特率为 **115200**，可用 `--baud 460800` 提高烧录速度；遇到线材/串口稳定性问题使用默认值。
+ROM 烧录速率与运行中 **921600** 的日志/配网速率是两回事。
+
+当前分区中 NVS 从 `0x9000` 开始；脚本不执行整片擦除，也不写入 NVS 镜像。
+但从其他产品切换时，旧 NVS 布局/格式未必兼容，不能保证保留其配置。
+
+### 3. 已安装本工程后的常规升级
+
+相同硬件且 bootloader/分区表不变时，默认只更新应用，保留已配 Wi-Fi：
+
+```sh
+python sdk/esp32/tools/flash_firmware.py --port COM7
+```
+
+工具不会自动判断旧板上的分区是否相同。首次装机不能省略 `--all`；变更分区表时
+需要重新评估原有数据，再按首次流程处理。常规升级不需要 `erase_flash`。
+
+### 4. 卡在 Connecting 时：BOOT + RST
+
+大多数板可由 USB-UART 的 DTR/RTS 自动进入下载模式；失败时：
+
+1. 保持右 USB2 接电脑，**按住右侧 BOOT**。
+2. 短按一次左侧 **RST**，再松开 RST。
+3. 松开 BOOT，重新执行上面的烧录命令；若自动复位仍打断下载模式，按住 BOOT
+   启动命令，等终端已识别芯片/开始上传 stub 后再松开。
+4. 写入和读回校验都成功后，确保 BOOT 已松开；未自动运行就短按一次 RST。
+
+BOOT 是复位瞬间把 GPIO0 拉低以选择 ROM 下载模式，不是开启 OTG 的按钮，也不修复
+CC 或 Hub 兼容性。原理见[乐鑫启动模式说明](https://docs.espressif.com/projects/esptool/en/latest/esp32s3/advanced-topics/boot-mode-selection.html)。
+
+## 刷完后的验收与配网
+
+先不接 H1，等 ESP 启动后运行：
+
+```sh
+python sdk/esp32/tools/h1_wifi_setup.py --port COM7 status
+```
+
+工具只读 INFO，自动探测 **921600 / 115200**，不切换复位引脚。应看到
+`target: esp32s3`、`firmware: h1-wifi/0.4.5`、`ok: true`。
+此时 `usb_connected: false` 正常，因为 H1 尚未接入；新装机未配 Wi-Fi 时
+`wifi_connected: false` 也正常，这不代表刷入失败。
+
+随后可在电脑执行交互配网（密码隐藏输入，不写进命令行）：
+
+```sh
+python sdk/esp32/tools/h1_wifi_setup.py --port COM7 set
+# 按提示输入 2.4GHz Wi-Fi 名称和密码；等待几秒后再查询
+python sdk/esp32/tools/h1_wifi_setup.py --port COM7 status
+```
+
+也可直接在 H1 的 **Wi-Fi设置**（`H1WiFiSetup.bda`）扫描、输入密码和连接：
+
+1. 保持 USB2 由电脑或独立 5V 电源供电。
+2. 左 USB1 接软线 OTG，OTG 接 H1 的 USB-A→Mini-USB 数据线。
+3. 打开 H1「Wi-Fi设置」，如果系统问「是否连接USB」选「否」，不进入磁盘模式。
+4. 观察外设连接，再连接 2.4GHz Wi-Fi；取得 IP 后才能认定联网成功。
+5. 再打开新闻等应用做一次真实网络请求，区分「镜像写入成功」「USB 已枚举」和「网站访问成功」。
+
+如果要看原始启动日志，关闭上述工具后可用
+`python -m serial.tools.miniterm COM7 921600`（Ctrl+] 退出）。不能同时用两个程序占串口。
+`status` 含当前网络信息，分享故障记录前应遮去个人 SSID/IP，密码和网站凭据不要放入仓库。
+
+## 常见故障
+
+| 现象 | 检查 / 处理 |
+| --- | --- |
+| IDF 版本拒绝 / `IDF_PATH` 不存在 | 激活 5.5.6 环境，核对精确提交；不要删掉脚本的版本校验 |
+| staging 路径含空格 | 换无空格路径，源码仓库不用搬迁 |
+| 组件下载失败 | 恢复 GitHub/乐鑫下载和组件站访问；保留锁文件，不用随机改版本解决 |
+| 编译器内存不足 | 用 `--jobs 1`；保留项目 `MINIMAL_BUILD`，不把无关 LCD/相机栈加进来 |
+| 找不到串口 / Access denied | 核对 USB2、数据线、CH340 驱动、实际 COM 号；退出所有串口占用程序 |
+| Connecting 超时 | 使用 BOOT+RST；确认接的是 ESP USB2，不是 H1 串口 |
+| 写入或 verify 失败 | 先解决供电/数据线/端口，使用默认 `--baud 115200`；未校验成功不要当成已刷好 |
+| 启动日志乱码 / INFO 无响应 | 使用同一提交的新工具；0.4.5 的 console 为 921600，旧工具仅支持 115200 |
+| `usb_connected=false` | H1 未接或未被枚举；检查软 OTG、J-OTG/VBUS和单一 USB 所有者，充电图标不是枚举证据 |
+| Wi-Fi 已连但 HTTPS 失败 | 核对校时、DNS、站点状态和 PSRAM/TLS 配置；固件写入校验不证明网站可访问 |
+
+当前构建/烧录工具的验证及实机证据见[验证边界](esp32-verification.md)。
+
+## H1 应用构建和最小用法
 
 在 SDK 根目录配置好原有 MIPS 工具链后：
 

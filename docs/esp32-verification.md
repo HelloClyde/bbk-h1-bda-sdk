@@ -1,5 +1,27 @@
 # ESP32 扩展验证记录
 
+## 0.4.5 构建与烧录教程补全
+
+从公开主分支 `0b1e907a64f84f4f964b4dc6f5dc61e1dc60c05c` 重新检出源码，使用
+本地 ESP-IDF 5.5.6 固定提交和空白 staging，按[教程](esp32.md#构建固件及检查产物)
+执行 `build_firmware.py --jobs 2`，842 步完整构建成功。应用 1292752 字节，
+3 MiB 应用分区余量约59%；esptool 4.13.0 对应用与 bootloader 的 checksum / hash 均验证有效。
+源码、IDF、产物哈希与生成配置摘要见[构建证据](evidence/esp32-firmware-build.json)。
+
+新增烧录工具 `--check`：不接设备，校验所有清单文件并输出 app-only / 首次安装的
+烧录方案。对本轮真实产物的两种方案检查通过；5项主机测试验证默认仅应用、首次三镜像、
+写后 verify、保留 NVS、不接受损坏镜像/未校验烧录配置、端口与 ROM 波特率参数。
+测试中的 esptool 设备操作为模拟，不是新镜像的实体烧录。
+CI 在固定 IDF 构建后也检查这两种方案，再上传完整固件 Artifact。
+
+本轮只读 INFO 另确认现有实体 ESP 为 `h1-wifi/0.4.5`、UART921600，Wi-Fi 和 H1 USB
+均已连接。未复位、未再次烧录、未改 NVS；**新构建镜像仍标记 hardware_verified=false**。
+同版本此前实际 AppOnly 写入/校验及桥接文件传输的证据独立保留在
+[物理测速记录](evidence/esp32-debug-speed-20261114.json)，不能把它改称本轮新镜像已刷入。
+没有重复运行新闻/音乐的持续播放验收。
+
+## 原始导入基线
+
 日期：2026-11-14。SDK 基线：HelloClyde/bbk-h1-bda-sdk
 `b34218548ecfa3dbc652e735352f76bff41b56c8`。
 

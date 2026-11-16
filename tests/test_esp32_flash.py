@@ -7,6 +7,8 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+import contextlib
+import io
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("esp_flash", ROOT / "sdk/esp32/tools/flash_firmware.py")
@@ -27,7 +29,7 @@ class FlashManifestTests(unittest.TestCase):
     def test_default_app_only_and_first_install_preserve_nvs(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); self.images(root)
-            for extra, expected in (([], 1), (["--all"], 3)):
+            for extra, expected in (([], 1), (["--all", "--baud", "460800"], 3)):
                 argv = ["flash", "--port", "TEST-NO-DEVICE", "--images", temp, *extra]
                 with patch.object(sys, "argv", argv), patch.object(flash.subprocess, "run") as run:
                     flash.main()
@@ -38,6 +40,7 @@ class FlashManifestTests(unittest.TestCase):
                         self.assertEqual(sum(arg.endswith(".bin") for arg in command), expected)
                         self.assertNotIn("erase_flash", command)
                         self.assertIn("0x10000", command)
+                        self.assertEqual(command[command.index("--baud") + 1], "460800" if extra else "115200")
                         if not extra:
                             self.assertNotIn("0x0", command); self.assertNotIn("0x8000", command)
 
@@ -49,4 +52,42 @@ class FlashManifestTests(unittest.TestCase):
                  patch.object(flash.subprocess,"run") as run:
                 with self.assertRaisesRegex(SystemExit,"manifest mismatch"):
                     flash.main()
+                run.assert_not_called()
+
+    def test_offline_check_validates_both_plans_without_port_or_esptool(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self.images(root)
+            for extra, expected in (([], {"0x10000"}), (["--all"], {"0x0", "0x8000", "0x10000"})):
+                output = io.StringIO()
+                with patch.object(sys, "argv", ["flash", "--images", temp, "--check", *extra]), \
+                     patch.object(flash.subprocess, "run") as run, contextlib.redirect_stdout(output):
+                    flash.main()
+                run.assert_not_called()
+                self.assertEqual(set(json.loads(output.getvalue())["flash_files"]), expected)
+            (root / "h1_wifi.bin").write_bytes(b"corrupt")
+            with patch.object(sys, "argv", ["flash", "--images", temp, "--check"]), \
+                 patch.object(flash.subprocess, "run") as run:
+                with self.assertRaisesRegex(SystemExit, "manifest mismatch"):
+                    flash.main()
+                run.assert_not_called()
+
+    def test_unhashed_flash_configuration_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); self.images(root)
+            manifest = json.loads((root / "build.json").read_text())
+            del manifest["files"]["flasher_args.json"]
+            (root / "build.json").write_text(json.dumps(manifest))
+            with patch.object(sys, "argv", ["flash", "--images", temp, "--check"]), \
+                 patch.object(flash.subprocess, "run") as run:
+                with self.assertRaisesRegex(SystemExit, "unverified flash configuration"):
+                    flash.main()
+                run.assert_not_called()
+
+    def test_flashing_requires_port_and_positive_rom_baud(self):
+        for argv in (["flash"], ["flash", "--check", "--baud", "0"]):
+            with patch.object(sys, "argv", argv), contextlib.redirect_stderr(io.StringIO()), \
+                 patch.object(flash.subprocess, "run") as run:
+                with self.assertRaises(SystemExit) as error:
+                    flash.main()
+                self.assertEqual(error.exception.code, 2)
                 run.assert_not_called()

@@ -14,6 +14,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install -e .
+      - run: python -m unittest discover -s tests -p test_esp32_flash.py -v
       - run: python -m unittest discover -s tests -p test_esp32.py -k session_protocol -v
       - run: python -m unittest discover -s tests -p test_esp32.py -k wifi_ui_host -v
   firmware:
@@ -25,6 +26,8 @@ jobs:
         run: |
           . /opt/esp/idf/export.sh
           python sdk/esp32/tools/build_firmware.py --stage /tmp/h1-sdk-esp32 --jobs 2
+          python sdk/esp32/tools/flash_firmware.py --check
+          python sdk/esp32/tools/flash_firmware.py --check --all
       - uses: actions/upload-artifact@v4
         with:
           name: ESP32-S3-firmware

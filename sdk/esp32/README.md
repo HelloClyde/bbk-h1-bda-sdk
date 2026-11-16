@@ -9,6 +9,10 @@ Wi-Fi 扫描/设置、校时、通用 AAC 解码和 H1Debug UART 隧道。
 
 ## 构建
 
+首次使用请按[完整构建与烧录教程](../../docs/esp32.md#从零安装-esp32-s3-构建环境)操作：
+含 Windows EIM 安装/环境激活、Linux/macOS、板型与精确版本、产物检查、首次/升级
+烧录、BOOT+RST、端口排查和刷后配网验收。下面是已配置好环境后的速查。
+
 需要 ESP-IDF **5.5.6**，固定提交
 `880a203ae603d08a94d06aa01e0d6761958e5e9e`，并进入其 Python/编译器环境。
 `esp32/main/idf_component.yml` 和 `esp32/dependencies.lock` 固定 CDC Host **2.4.1**、
@@ -37,6 +41,7 @@ Windows 的 stage 可用 `C:/Espressif/h1-sdk-esp32`。路径不能含空格；�
 
 ```sh
 python -m serial.tools.list_ports
+python sdk/esp32/tools/flash_firmware.py --check --all
 python sdk/esp32/tools/flash_firmware.py --port COM7 --all
 python sdk/esp32/tools/h1_wifi_setup.py --port COM7 status
 ```
@@ -44,6 +49,9 @@ python sdk/esp32/tools/h1_wifi_setup.py --port COM7 status
 需要 `pyserial` 和 IDF 环境里的 `esptool`。首次 `--all` 写入 bootloader、分区表和应用；
 后续省略 `--all` 默认仅更新应用。工具先验证 SHA256，再写入并读回校验，不执行整片擦除，
 默认保留 NVS。改分区表之前自行确认原 NVS 布局；不是通用跨产品升级器。
+`--check` 仅离线验证哈希和烧录方案，不需要端口、不调用 esptool；省略 `--all` 可检查
+常规 app-only 方案。实际烧录默认 ROM 波特率115200，`--baud 460800` 可选；这与固件
+运行时的921600 console不同。连接失败的 BOOT+RST 步骤见上方完整教程。
 
 正常用 [Wi-Fi设置 BDA](../../examples/esp32_wifi/README.md) 配网。
 电脑也可 `h1_wifi_setup.py --port COM7 set`，通过交互输入名称和隐藏密码，不将密码放在

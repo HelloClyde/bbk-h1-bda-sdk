@@ -1,0 +1,52 @@
+{
+  "source_base": "0b1e907a64f84f4f964b4dc6f5dc61e1dc60c05c",
+  "firmware": "0.4.5",
+  "target": "esp32s3",
+  "idf_commit": "880a203ae603d08a94d06aa01e0d6761958e5e9e",
+  "command": "python sdk/esp32/tools/build_firmware.py --stage TEMP/h1-sdk-esp32-doc-20261116 --jobs 2",
+  "clean_staging": true,
+  "build_steps": 842,
+  "build_success": true,
+  "app_bytes": 1292752,
+  "app_partition_bytes": 3145728,
+  "generated_config": {
+    "USB_HOST_HUBS_SUPPORTED": true,
+    "SPIRAM": true,
+    "MBEDTLS_EXTERNAL_MEM_ALLOC": true,
+    "ESP_CONSOLE_UART_BAUDRATE": 921600,
+    "ESP_CONSOLE_UART_NUM": 0,
+    "ESP_CONSOLE_UART_TX_GPIO": 43,
+    "ESP_CONSOLE_UART_RX_GPIO": 44
+  },
+  "files": {
+    "h1_wifi.bin": "9d96c0efc10cb476eaf7eba0b0f545a8d5aed88e112ca468ffee33525e0add06",
+    "bootloader/bootloader.bin": "6108424ec767622be8a4f575c3db3aa05571226953110bde28a88dc3365bdd5a",
+    "partition_table/partition-table.bin": "73c0b5c3e5fcba3a151cc70c453c93dd5f4798899e7f2f8cca76da1f32ffc501",
+    "flasher_args.json": "4b1038edbd1bd4d24525d61c110ec3e45240a166c587fb79087f31b943de137b",
+    "config/sdkconfig.json": "fee73289fbc0208c67e19221ae28503145904645c4ec4fa941fb06a7ff8130c5",
+    "config/sdkconfig.h": "e1ddecaef40fc0d511b1db1e049c52d22d36c2d03cf9408201fc2c7468a353a4"
+  },
+  "image_info": {
+    "esptool": "4.13.0",
+    "app_checksum_valid": true,
+    "app_hash_valid": true,
+    "bootloader_checksum_valid": true,
+    "bootloader_hash_valid": true
+  },
+  "offline_flash_plans": {
+    "app_only_check_passed": true,
+    "all_check_passed": true,
+    "unittest_cases": 5,
+    "tests_use_mock_esptool": true
+  },
+  "hardware": {
+    "new_image_flashed": false,
+    "hardware_verified": false,
+    "existing_firmware": "h1-wifi/0.4.5",
+    "readonly_info_ok": true,
+    "readonly_info_baud": 921600,
+    "wifi_connected": true,
+    "usb_connected": true,
+    "prior_physical_evidence": "esp32-debug-speed-20261114.json"
+  }
+}
