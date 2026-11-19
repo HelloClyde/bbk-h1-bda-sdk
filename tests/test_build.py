@@ -40,6 +40,35 @@ class MultiSourceBuildTests(unittest.TestCase):
         header = decode_header(data)
         self.assertEqual(struct.unpack_from("<I", header, 0x10)[0], len(data) - 4)
 
+    def test_power_scope_is_linked_without_moving_the_bda_entry(self) -> None:
+        for extension, linkage in (("c", ""), ("cpp", 'extern "C" ')):
+            with self.subTest(language=extension), tempfile.TemporaryDirectory() as temporary:
+                source = Path(temporary) / f"input.{extension}"
+                source.write_text(
+                    '#include "h1_input.h"\n'
+                    'static void run(void) { int code, value; h1_event_fetch(&code, &value); }\n'
+                    f'{linkage}__attribute__((section(".text.h1_bda_entry")))\n'
+                    'int h1_bda_main(void) { return h1_power_run(run); }\n',
+                    encoding="ascii",
+                )
+                elf = Path(temporary) / "input.elf"
+                payload = compile_sources([source], [], debug_elf=elf)
+                symbols = subprocess.run(
+                    [str(_find_binary_tool("llvm-nm", "nm")), "-n", str(elf)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                ).stdout
+
+                self.assertRegex(symbols.lower(), r"(?m)^83c00020\s+t\s+h1_bda_main$")
+                self.assertIn("h1_power_run", symbols)
+                self.assertIn("h1_power_unwind", symbols)
+                context = next(line.split()[0] for line in symbols.splitlines()
+                               if line.endswith(" h1_power_context"))
+                offset = int(context, 16) - 0x83C00020
+                self.assertGreaterEqual(offset, 0)
+                self.assertEqual(payload[offset:offset + 4], bytes(4))
+
     def test_noinit_reserves_ram_without_expanding_payload(self) -> None:
         payload = compile_sources([FIXTURES / "noinit_entry.c"], [])
         self.assertLess(len(payload), 4096)

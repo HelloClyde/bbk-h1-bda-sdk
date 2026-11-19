@@ -23,6 +23,24 @@ For sustained/combined keys on V1.41, use `h1_game_input_sample()` after feeding
 events to `h1_game_input_event()`; event identifiers differ from native game
 scancodes. See [the native game guide](../native-games.md).
 
+## Power button on H1/Y100 V1.41
+
+`h1_event_fetch()` and `h1_input_poll_key()` handle a pending system shutdown
+before reading the keyboard queue. Standard applications pick up this behavior
+when rebuilt with the updated headers. A custom foreground loop that bypasses
+both input APIs can call `h1_power_poll()` at its regular polling boundary.
+`h1_event_fetch_raw()` is available for tools that need only the raw queue.
+
+The firmware finishes shutdown through its native GUI event service by
+default. Applications with pending saves or resources to close can call
+`h1_power_run(run)` on the foreground thread. A power request observed by the
+SDK during `run` exits that callback and returns `1`. The caller then performs
+its normal cleanup and returns from the BDA entry. Keep cleanup outside the
+callback and finish it before calling any managed polling API again. In C++,
+keep objects that require destructors outside this callback. The SDK build
+command links the runtime for `h1_power_run()` automatically. A custom link
+command can include `sdk/src/h1_power.S` when using that API.
+
 ## Clocks
 
 - `h1_raw_tick_80hz()` is a continuously running 80 Hz monotonic tick.

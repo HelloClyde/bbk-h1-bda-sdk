@@ -1,7 +1,7 @@
 #ifndef H1_INPUT_H
 #define H1_INPUT_H
 
-#include "h1_runtime.h"
+#include "h1_power.h"
 
 #define H1_GUI_EVENT_FETCH_OFFSET 0x750u
 
@@ -58,7 +58,7 @@
 #define H1_KEY_FN      43
 #define H1_KEY_POWER   44
 
-static inline int h1_event_fetch(int *code, int *value)
+static inline int h1_event_fetch_raw(int *code, int *value)
 {
     typedef int (*function_type)(int *, int *);
     function_type function = (function_type)h1_runtime_entry(
@@ -68,6 +68,13 @@ static inline int h1_event_fetch(int *code, int *value)
     if (!code || !value) return 0;
     *code = *value = -1;
     return function ? function(code, value) : 0;
+}
+
+static inline int h1_event_fetch(int *code, int *value)
+{
+    if (!code || !value) return 0;
+    h1_power_poll();
+    return h1_event_fetch_raw(code, value);
 }
 
 /* Returns 1 for one key transition, 0 when no key transition is available. */

@@ -24,6 +24,7 @@ ENTRY_VA = 0x83C00020
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_INCLUDE = PROJECT_ROOT / "sdk" / "include"
 RESEARCH_INCLUDE = PROJECT_ROOT / "reverse" / "include"
+POWER_RUNTIME = PROJECT_ROOT / "sdk" / "src" / "h1_power.S"
 
 
 def _path_privacy_flags(work: Path) -> list[str]:
@@ -144,8 +145,7 @@ def compile_sources(
 ) -> bytes:
     if not sources:
         raise ValueError("at least one source file is required")
-    sources = list(sources)
-    sources.append(PROJECT_ROOT / "sdk/runtime/memory.c")
+    sources = [*sources, PROJECT_ROOT / "sdk/runtime/memory.c", POWER_RUNTIME]
     if runtime:
         sources.extend([PROJECT_ROOT / "sdk/runtime/entry.S", PROJECT_ROOT / "sdk/runtime/start.c"])
     if esp32:
